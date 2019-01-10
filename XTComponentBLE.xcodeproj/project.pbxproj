@@ -7,13 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		18A80EEC21951C7300454795 /* XTComponentBLE.h in Headers */ = {isa = PBXBuildFile; fileRef = 18A80EEA21951C7300454795 /* XTComponentBLE.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		182A154A21A3AFF80039CCBD /* XTCBPeripheral.h in Headers */ = {isa = PBXBuildFile; fileRef = 182A154821A3AFF80039CCBD /* XTCBPeripheral.h */; };
+		182A154B21A3AFF80039CCBD /* XTCBPeripheral.m in Sources */ = {isa = PBXBuildFile; fileRef = 182A154921A3AFF80039CCBD /* XTCBPeripheral.m */; };
+		18A80EF621951CD600454795 /* XTBLEManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 18A80EF421951CD600454795 /* XTBLEManager.h */; };
+		18A80EF721951CD600454795 /* XTBLEManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 18A80EF521951CD600454795 /* XTBLEManager.m */; };
+		18A80F16219536C600454795 /* XTComponentBLE.podspec in Resources */ = {isa = PBXBuildFile; fileRef = 18A80F14219536C600454795 /* XTComponentBLE.podspec */; };
+		18A80F17219536C600454795 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 18A80F15219536C600454795 /* LICENSE */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		182A154821A3AFF80039CCBD /* XTCBPeripheral.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XTCBPeripheral.h; sourceTree = "<group>"; };
+		182A154921A3AFF80039CCBD /* XTCBPeripheral.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XTCBPeripheral.m; sourceTree = "<group>"; };
 		18A80EE721951C7300454795 /* XTComponentBLE.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = XTComponentBLE.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		18A80EEA21951C7300454795 /* XTComponentBLE.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XTComponentBLE.h; sourceTree = "<group>"; };
 		18A80EEB21951C7300454795 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		18A80EF421951CD600454795 /* XTBLEManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XTBLEManager.h; sourceTree = "<group>"; };
+		18A80EF521951CD600454795 /* XTBLEManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XTBLEManager.m; sourceTree = "<group>"; };
+		18A80F14219536C600454795 /* XTComponentBLE.podspec */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = XTComponentBLE.podspec; sourceTree = "<group>"; };
+		18A80F15219536C600454795 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -30,6 +40,8 @@
 		18A80EDD21951C7300454795 = {
 			isa = PBXGroup;
 			children = (
+				18A80F15219536C600454795 /* LICENSE */,
+				18A80F14219536C600454795 /* XTComponentBLE.podspec */,
 				18A80EE921951C7300454795 /* XTComponentBLE */,
 				18A80EE821951C7300454795 /* Products */,
 			);
@@ -46,10 +58,29 @@
 		18A80EE921951C7300454795 /* XTComponentBLE */ = {
 			isa = PBXGroup;
 			children = (
-				18A80EEA21951C7300454795 /* XTComponentBLE.h */,
+				18A80EF221951CA500454795 /* BLE4.0 */,
+				18A80EF321951CA500454795 /* Models */,
 				18A80EEB21951C7300454795 /* Info.plist */,
 			);
 			path = XTComponentBLE;
+			sourceTree = "<group>";
+		};
+		18A80EF221951CA500454795 /* BLE4.0 */ = {
+			isa = PBXGroup;
+			children = (
+				18A80EF421951CD600454795 /* XTBLEManager.h */,
+				18A80EF521951CD600454795 /* XTBLEManager.m */,
+			);
+			path = BLE4.0;
+			sourceTree = "<group>";
+		};
+		18A80EF321951CA500454795 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				182A154821A3AFF80039CCBD /* XTCBPeripheral.h */,
+				182A154921A3AFF80039CCBD /* XTCBPeripheral.m */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -59,7 +90,8 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				18A80EEC21951C7300454795 /* XTComponentBLE.h in Headers */,
+				182A154A21A3AFF80039CCBD /* XTCBPeripheral.h in Headers */,
+				18A80EF621951CD600454795 /* XTBLEManager.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,6 +152,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				18A80F17219536C600454795 /* LICENSE in Resources */,
+				18A80F16219536C600454795 /* XTComponentBLE.podspec in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +164,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				182A154B21A3AFF80039CCBD /* XTCBPeripheral.m in Sources */,
+				18A80EF721951CD600454795 /* XTBLEManager.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -266,6 +302,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = XTComponentBLE/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -290,6 +327,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = XTComponentBLE/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
