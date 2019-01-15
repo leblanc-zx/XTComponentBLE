@@ -27,6 +27,7 @@ typedef NS_ENUM(NSUInteger, XTBLENSErrorCode) {
     XTBLENSErrorCodeReceiveFailed = 1009,   //接收失败
     XTBLENSErrorCodeReceiveTimeOut = 1010,  //接收超时
     XTBLENSErrorCodeReceiveCanceled = 1011, //接收被取消
+    XTBLENSErrorCodeAutoCancelLastTimerTask = 1012,  //自动取消上个TIMER任务
 };
 
 typedef void(^ScanBlock)(NSArray *bleDevices);

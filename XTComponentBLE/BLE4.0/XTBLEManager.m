@@ -44,9 +44,6 @@ NSString *const CENTRALMANAGER_DIDUPDATESTATE_BLOCK = @"CENTRALMANAGER_DIDUPDATE
 
 /*----connect----*/
 @property (nonatomic, strong) XTCBPeripheral *currentPeripheral;         //当前的蓝牙设备
-//@property (nonatomic, strong) CBCharacteristic *writeCharacteristic;     //当前的写特性
-//@property (nonatomic, strong) CBCharacteristic *changeNameCharacteristic;//当前修改名字特性
-//@property (nonatomic, strong) CBCharacteristic *notifiyCharacteristic;   //当前的通知特性
 
 /*----发送数据----*/
 @property (nonatomic, strong) NSMutableData *responseData;
@@ -189,12 +186,16 @@ static id _instace;
             }
         } else if (state == TimerStateCancel) {
             //timer被取消
-            //扫描被取消了
-            self.isScanning = NO;
-            [self.centralManager stopScan];
-            if (cahcheFinishBlock) {
-                [self.blockDictionary removeObjectForKey:SCAN_FINISHBLOCK];
-                cahcheFinishBlock(error);
+            if (error.code == XTBLENSErrorCodeAutoCancelLastTimerTask) {
+                //自动移除上次任务 do nothing
+            } else {
+                //扫描被取消了
+                self.isScanning = NO;
+                [self.centralManager stopScan];
+                if (cahcheFinishBlock) {
+                    [self.blockDictionary removeObjectForKey:SCAN_FINISHBLOCK];
+                    cahcheFinishBlock(error);
+                }
             }
         }
         
@@ -280,7 +281,9 @@ static id _instace;
             
         } else if (state == TimerStateCancel) {
             //timer被取消
-            if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnectFailed) {
+            if (error.code == XTBLENSErrorCodeAutoCancelLastTimerTask) {
+                //自动移除上次任务 do nothing
+            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnectFailed) {
                 //连接失败
                 [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
                 [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
@@ -490,7 +493,9 @@ static id _instace;
         }
         if (state == TimerStateCancel) {
             //timer被取消了
-            if (error) {
+            if (error.code == XTBLENSErrorCodeAutoCancelLastTimerTask) {
+                //自动移除上次任务 do nothing
+            } else if (error) {
                 //数据接收异常 || 数据接收被取消
                 [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];
                 [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];
@@ -640,7 +645,8 @@ static id _instace;
     //移除上次任务
     dispatch_source_t timer = [self.timerDictionary objectForKey:identity];
     if (timer) {
-        [self cancelTimerWithIdentity:identity error:nil];
+        NSError *error = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeAutoCancelLastTimerTask userInfo:@{@"NSLocalizedDescription": @"移除上次任务"}];
+        [self cancelTimerWithIdentity:identity error:error];
     }
     
     //创建dispatch_source_t的timer
