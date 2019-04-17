@@ -121,6 +121,13 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
 - (void)cancelReceiveData;
 
 /**
+ 取消接收数据
+ 
+ @param error 错误
+ */
+- (void)cancelReceiveData:(NSError *)error;
+
+/**
  关闭Manager
  */
 - (void)doClose;

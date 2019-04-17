@@ -13,6 +13,8 @@
 		18A80EF721951CD600454795 /* XTBLEManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 18A80EF521951CD600454795 /* XTBLEManager.m */; };
 		18A80F16219536C600454795 /* XTComponentBLE.podspec in Resources */ = {isa = PBXBuildFile; fileRef = 18A80F14219536C600454795 /* XTComponentBLE.podspec */; };
 		18A80F17219536C600454795 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 18A80F15219536C600454795 /* LICENSE */; };
+		18F64AE52266EBFF0039B4DE /* XTBLEManager+Log.h in Headers */ = {isa = PBXBuildFile; fileRef = 18F64AE32266EBFF0039B4DE /* XTBLEManager+Log.h */; };
+		18F64AE62266EBFF0039B4DE /* XTBLEManager+Log.m in Sources */ = {isa = PBXBuildFile; fileRef = 18F64AE42266EBFF0039B4DE /* XTBLEManager+Log.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,8 +24,10 @@
 		18A80EEB21951C7300454795 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		18A80EF421951CD600454795 /* XTBLEManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XTBLEManager.h; sourceTree = "<group>"; };
 		18A80EF521951CD600454795 /* XTBLEManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XTBLEManager.m; sourceTree = "<group>"; };
-		18A80F14219536C600454795 /* XTComponentBLE.podspec */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = XTComponentBLE.podspec; sourceTree = "<group>"; };
+		18A80F14219536C600454795 /* XTComponentBLE.podspec */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = XTComponentBLE.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		18A80F15219536C600454795 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		18F64AE32266EBFF0039B4DE /* XTBLEManager+Log.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "XTBLEManager+Log.h"; sourceTree = "<group>"; };
+		18F64AE42266EBFF0039B4DE /* XTBLEManager+Log.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "XTBLEManager+Log.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +74,8 @@
 			children = (
 				18A80EF421951CD600454795 /* XTBLEManager.h */,
 				18A80EF521951CD600454795 /* XTBLEManager.m */,
+				18F64AE32266EBFF0039B4DE /* XTBLEManager+Log.h */,
+				18F64AE42266EBFF0039B4DE /* XTBLEManager+Log.m */,
 			);
 			path = BLE4.0;
 			sourceTree = "<group>";
@@ -91,6 +97,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				182A154A21A3AFF80039CCBD /* XTCBPeripheral.h in Headers */,
+				18F64AE52266EBFF0039B4DE /* XTBLEManager+Log.h in Headers */,
 				18A80EF621951CD600454795 /* XTBLEManager.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -166,6 +173,7 @@
 			files = (
 				182A154B21A3AFF80039CCBD /* XTCBPeripheral.m in Sources */,
 				18A80EF721951CD600454795 /* XTBLEManager.m in Sources */,
+				18F64AE62266EBFF0039B4DE /* XTBLEManager+Log.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

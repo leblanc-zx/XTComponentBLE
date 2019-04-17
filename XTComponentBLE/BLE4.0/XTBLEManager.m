@@ -336,7 +336,6 @@ static id _instace;
 /**
  重新连接蓝牙设备
  
- @param bleDeviceInfo 蓝牙设备信息
  @param timeOut 超时时间 默认15秒
  @param success 成功
  @param failure 失败
@@ -578,6 +577,19 @@ static id _instace;
 }
 
 /**
+ 取消接收数据
+ 
+ @param error 错误
+ */
+- (void)cancelReceiveData:(NSError *)error {
+    if (!error) {
+        [self cancelReceiveData];
+    } else {
+        [self cancelTimerWithIdentity:TIMER_RECEIVE_DATA error:error];
+    }
+}
+
+/**
  关闭Manager
  */
 - (void)doClose {
@@ -611,7 +623,7 @@ static id _instace;
  @param success success
  @param failure error
  */
-- (void)changeDeviceName:(NSString *)deviceName success:(void (^)())success failure:(void (^)(NSError *))failure {
+- (void)changeDeviceName:(NSString *)deviceName success:(void (^)())success failure:(void (^)(NSError *error))failure {
     NSData *requestData = [deviceName dataUsingEncoding:NSUTF8StringEncoding];
     [self sendData:requestData characteristic:self.currentPeripheral.nameCharacteristic timeOut:10 startFilter:nil endFilter:nil success:^(NSData *data) {
         if (success) {
@@ -849,7 +861,6 @@ static id _instace;
 // 读取新值的结果
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error
 {
-    
     if (error) {
         [self cancelTimerWithIdentity:TIMER_RECEIVE_DATA error:error];
     }
