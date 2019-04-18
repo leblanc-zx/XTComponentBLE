@@ -13,6 +13,7 @@
 NSString *const logPassword = @"3c3d0d30cf74973e1bc2b212f8cbae20";
 
 typedef NS_ENUM(NSUInteger, XTBLELogType) { //日志类型
+    XTBLELogTypeSendSetting,    //发送设置
     XTBLELogTypeSendData,       //发送数据
     XTBLELogTypeReceiveData,    //接收数据
     XTBLELogTypeSuccess,        //成功结果
@@ -33,7 +34,7 @@ void qhd_exchangeInstanceMethod(Class class, SEL originalSelector, SEL newSelect
 NSString *BLELogSign;
 
 + (void)load {
-    qhd_exchangeInstanceMethod([self class], @selector(sendData:timeOut:startFilter:endFilter:success:failure:), @selector(qhd_sendData:timeOut:startFilter:endFilter:success:failure:));
+    qhd_exchangeInstanceMethod([self class], @selector(sendData:timeOut:timeInterval:startFilter:endFilter:success:failure:), @selector(qhd_sendData:timeOut:timeInterval:startFilter:endFilter:success:failure:));
     qhd_exchangeInstanceMethod([self class], @selector(peripheral:didUpdateValueForCharacteristic:error:), @selector(qhd_peripheral:didUpdateValueForCharacteristic:error:));
     
 }
@@ -67,16 +68,19 @@ NSString *BLELogSign;
  
  @param data 帧数据
  @param timeOut 超时时间
+ @param timeInterval 发送帧时间间隔 0.0~1.0之间
  @param startFilter 开始条件
  @param endFilter 结束条件
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)qhd_sendData:(NSData *)data timeOut:(int)timeOut startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+- (void)qhd_sendData:(NSData *)data timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+    //log
+    [self writeToFileWithObject:[NSString stringWithFormat:@"超时时间：%d秒    每帧间隔：%.3lf秒", timeOut, timeInterval] logType:XTBLELogTypeSendSetting];
     //log
     [self writeToFileWithObject:data logType:XTBLELogTypeSendData];
     
-    [self qhd_sendData:data timeOut:timeOut startFilter:startFilter endFilter:endFilter success:^(NSData *successData) {
+    [self qhd_sendData:data timeOut:timeOut timeInterval:timeInterval startFilter:startFilter endFilter:endFilter success:^(NSData *successData) {
         //log
         [self writeToFileWithObject:successData logType:XTBLELogTypeSuccess];
         if (success) {
@@ -170,11 +174,16 @@ NSString *BLELogSign;
     NSMutableString *text = [[NSMutableString alloc] init];
     NSString *currentTime = [self getCurrentTime];
     switch (logType) {
-        case XTBLELogTypeSendData:
+        case XTBLELogTypeSendSetting:
         {
             [text appendFormat:@"\n\n@begin  method：%@\n", self.methodName.length > 0 ? self.methodName : @"未知"];
+            [text appendFormat:@"\n<发送设置>%@</发送设置>\n", object];
             [text appendFormat:@"\n<开头过滤>%@</开头过滤>\n", self.startFileter.length > 0 ? self.startFileter : @"未知"];
-            [text appendFormat:@"\n<结尾过滤>%@</结尾过滤>\n", self.endFilter.length > 0 ? self.endFilter : @"未知"];
+            [text appendFormat:@"\n<结尾过滤>%@</结尾过滤>", self.endFilter.length > 0 ? self.endFilter : @"未知"];
+        }
+            break;
+        case XTBLELogTypeSendData:
+        {
             [text appendString:@"\n<发送>"];
             [text appendFormat:@"时间：%@", currentTime];
             [text appendFormat:@"    帧：%@", object];
@@ -254,6 +263,37 @@ NSString *BLELogSign;
     NSString *theFilePath = [[paths objectAtIndex:0] stringByAppendingFormat:@"/XTBLEDataLog%@.text", day];
     NSString *string = [[NSString alloc] initWithContentsOfFile:theFilePath encoding:NSUTF8StringEncoding error:nil];
     return string;
+}
+
+/**
+ 获取带颜色的日志文件
+
+ @param day 日期 yyyy-MM-dd
+ @return 日志字符串
+ */
+- (NSAttributedString *)getColorFileWithDay:(NSString *)day {
+    NSString *fileStr = [self getFileWithDay:day];
+    if (fileStr.length == 0) {
+        fileStr = @"";
+    }
+    NSMutableAttributedString *colorStr = [[NSMutableAttributedString alloc] initWithString:fileStr];
+    [colorStr addAttribute:NSForegroundColorAttributeName value:[UIColor redColor] range:NSMakeRange(0, fileStr.length)];
+    NSScanner *scanner = [NSScanner scannerWithString:fileStr];
+    NSString *text = nil;
+    while ([scanner isAtEnd] == NO) {
+        
+        [scanner scanUpToString:@"@begin" intoString:nil];
+        [scanner scanUpToString:@"@end" intoString:&text];
+        
+        NSString *subText = [NSString stringWithFormat:@"%@@end", text];
+        NSRange range = [fileStr rangeOfString:subText];
+        
+        if ([subText containsString:@"<成功>"]) {
+            [colorStr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:0.118 green:0.549 blue:0.337 alpha:1] range:range];
+        }
+        
+    }
+    return colorStr;
 }
 
 @end

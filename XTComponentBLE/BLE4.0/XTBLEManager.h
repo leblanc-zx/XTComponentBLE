@@ -98,12 +98,13 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  
  @param data 帧数据
  @param timeOut 超时时间
+ @param timeInterval 发送帧时间间隔 0.0~1.0之间
  @param startFilter 开始条件
  @param endFilter 结束条件
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data timeOut:(int)timeOut startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
+- (void)sendData:(NSData *)data timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
 
 /**
  取消扫描蓝牙设备

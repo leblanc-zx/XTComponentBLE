@@ -40,6 +40,14 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (NSString *)getFileWithDay:(NSString *)day;
 
+/**
+ 获取带颜色的日志文件
+ 
+ @param day 日期 yyyy-MM-dd
+ @return 日志字符串
+ */
+- (NSAttributedString *)getColorFileWithDay:(NSString *)day;
+
 @end
 
 NS_ASSUME_NONNULL_END

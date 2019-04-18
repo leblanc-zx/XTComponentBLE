@@ -354,7 +354,7 @@ static id _instace;
  @param failure 出错
  */
 - (void)sendData:(NSData *)data startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
-    [self sendData:data timeOut:10 startFilter:startFilter endFilter:endFilter success:success failure:failure];
+    [self sendData:data timeOut:10 timeInterval:0 startFilter:startFilter endFilter:endFilter success:success failure:failure];
 }
 
 /**
@@ -362,13 +362,14 @@ static id _instace;
  
  @param data 帧数据
  @param timeOut 超时时间
+ @param timeInterval 发送帧时间间隔 0.0~1.0之间
  @param startFilter 开始条件
  @param endFilter 结束条件
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data timeOut:(int)timeOut startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
-    [self sendData:data characteristic:self.currentPeripheral.writeCharacteristic timeOut:timeOut startFilter:startFilter endFilter:endFilter success:success failure:failure];
+- (void)sendData:(NSData *)data timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+    [self sendData:data characteristic:self.currentPeripheral.writeCharacteristic timeOut:timeOut timeInterval:timeInterval startFilter:startFilter endFilter:endFilter success:success failure:failure];
 }
 
 /**
@@ -376,12 +377,13 @@ static id _instace;
 
  @param data 帧数据
  @param timeOut 超时时间
+ @param timeInterval 发送帧时间间隔 0.0~1.0之间
  @param startFilter 开始条件
  @param endFilter 结束条件
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data characteristic:(CBCharacteristic *)characteristic timeOut:(int)timeOut startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+- (void)sendData:(NSData *)data characteristic:(CBCharacteristic *)characteristic timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
     
     if (!self.isBLEEnable) {
         if (failure) {
@@ -399,6 +401,12 @@ static id _instace;
     if (self.currentPeripheral.connectState != XTCBPeripheralConnectSuccess) {
         if (failure) {
             failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{@"NSLocalizedDescription": @"没有发现写特性"}]);
+        }
+        return;
+    }
+    if (data.length > LimitLength && timeInterval > 1) {
+        if (failure) {
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{@"NSLocalizedDescription": @"每帧发送时间间隔不能大于1秒"}]);
         }
         return;
     }
@@ -431,6 +439,7 @@ static id _instace;
             for (index = 0; index < data.length - LimitLength; index += LimitLength) {
                 NSData *subData = [data subdataWithRange:NSMakeRange(index, LimitLength)];
                 [self.currentPeripheral.peripheral writeValue:subData forCharacteristic:characteristic type:CBCharacteristicWriteWithResponse];
+                [self sleepWithTime:timeInterval];
             }
             NSData *leftData = [data subdataWithRange:NSMakeRange(index, data.length - index)];
             if (leftData) {
@@ -450,6 +459,7 @@ static id _instace;
             for (index = 0; index < data.length - LimitLength; index += LimitLength) {
                 NSData *subData = [data subdataWithRange:NSMakeRange(index, LimitLength)];
                 [self.currentPeripheral.peripheral writeValue:subData forCharacteristic:characteristic type:CBCharacteristicWriteWithoutResponse];
+                [self sleepWithTime:timeInterval];
             }
             NSData *leftData = [data subdataWithRange:NSMakeRange(index, data.length - index)];
             if (leftData) {
@@ -625,7 +635,7 @@ static id _instace;
  */
 - (void)changeDeviceName:(NSString *)deviceName success:(void (^)())success failure:(void (^)(NSError *error))failure {
     NSData *requestData = [deviceName dataUsingEncoding:NSUTF8StringEncoding];
-    [self sendData:requestData characteristic:self.currentPeripheral.nameCharacteristic timeOut:10 startFilter:nil endFilter:nil success:^(NSData *data) {
+    [self sendData:requestData characteristic:self.currentPeripheral.nameCharacteristic timeOut:10 timeInterval:0 startFilter:nil endFilter:nil success:^(NSData *data) {
         if (success) {
             success();
         }
@@ -1053,6 +1063,17 @@ static id _instace;
         return resultArray;
     }
     return nil;
+}
+
+/**
+ 睡眠
+
+ @param time time
+ */
+- (void)sleepWithTime:(float)time {
+    if (time > 0) {
+        sleep(time);
+    }
 }
 
 @end
