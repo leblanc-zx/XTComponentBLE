@@ -8,6 +8,9 @@
 
 #import "XTBLEManager+Log.h"
 #import <objc/runtime.h>
+#import <CommonCrypto/CommonDigest.h>
+
+NSString *const logPassword = @"3c3d0d30cf74973e1bc2b212f8cbae20";
 
 typedef NS_ENUM(NSUInteger, XTBLELogType) { //日志类型
     XTBLELogTypeSendData,       //发送数据
@@ -27,6 +30,7 @@ void qhd_exchangeInstanceMethod(Class class, SEL originalSelector, SEL newSelect
 }
 
 @implementation XTBLEManager (Log)
+NSString *BLELogSign;
 
 + (void)load {
     qhd_exchangeInstanceMethod([self class], @selector(sendData:timeOut:startFilter:endFilter:success:failure:), @selector(qhd_sendData:timeOut:startFilter:endFilter:success:failure:));
@@ -95,6 +99,38 @@ void qhd_exchangeInstanceMethod(Class class, SEL originalSelector, SEL newSelect
 }
 
 /**
+ 打开记录日志功能
+ 
+ @param password 密码
+ */
+- (void)registerLogWithPassword:(NSString *)password {
+    if (password.length == 0) {
+        return;
+    }
+    BLELogSign = [self MD5WithString:password];
+}
+
+/**
+ 获取MD5
+ 
+ @param string 明文
+ @return MD5字符串
+ */
+- (NSString *)MD5WithString:(NSString *)string
+{
+    const char *cStr = [string UTF8String];
+    unsigned char digest[CC_MD5_DIGEST_LENGTH];
+    CC_MD5( cStr, strlen(cStr), digest );
+    
+    NSMutableString *output = [NSMutableString stringWithCapacity:CC_MD5_DIGEST_LENGTH * 2];
+    
+    for(int i = 0; i < CC_MD5_DIGEST_LENGTH; i++)
+        [output appendFormat:@"%02X", digest[i]];
+    
+    return [output lowercaseString];
+}
+
+/**
  在请求方法中添加该函数
  
  @param method 方法名
@@ -126,6 +162,10 @@ void qhd_exchangeInstanceMethod(Class class, SEL originalSelector, SEL newSelect
  @param logType 日志类型
  */
 - (void)writeToFileWithObject:(id)object logType:(XTBLELogType)logType {
+    
+    if (![BLELogSign isEqualToString:logPassword]) {
+        return;
+    }
     
     NSMutableString *text = [[NSMutableString alloc] init];
     NSString *currentTime = [self getCurrentTime];
@@ -203,6 +243,11 @@ void qhd_exchangeInstanceMethod(Class class, SEL originalSelector, SEL newSelect
  @return 日志字符串
  */
 - (NSString *)getFileWithDay:(NSString *)day {
+    
+    if (![BLELogSign isEqualToString:logPassword]) {
+        return nil;
+    }
+    
     //获取沙盒路径
     NSArray *paths  = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES);
     //获取文件路径

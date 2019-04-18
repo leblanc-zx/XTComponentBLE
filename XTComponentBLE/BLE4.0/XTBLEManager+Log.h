@@ -17,6 +17,13 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly) NSString *endFilter;    //结尾过滤条件
 
 /**
+ 打开记录日志功能
+
+ @param password 密码
+ */
+- (void)registerLogWithPassword:(NSString *)password;
+
+/**
  在请求方法中添加该函数
 
  @param method 方法名
