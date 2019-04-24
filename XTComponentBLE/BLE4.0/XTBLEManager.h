@@ -61,7 +61,7 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  @param scanBlock 返回扫描到的设备列表
  @param finishBlock 扫描结束
  */
-- (void)scanWithTime:(int)time scanBlock:(ScanBlock)scanBlock finishBlock:(ScanFinishBlock)finishBlock;
+- (void)scanWithTime:(float)time scanBlock:(ScanBlock)scanBlock finishBlock:(ScanFinishBlock)finishBlock;
 
 /**
  连接蓝牙设备
@@ -71,7 +71,7 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  @param success 成功
  @param failure 失败
  */
-- (void)connectWithPeripheral:(XTCBPeripheral *)peripheral timeOut:(int)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure;
+- (void)connectWithPeripheral:(XTCBPeripheral *)peripheral timeOut:(float)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure;
 
 /**
  重新连接蓝牙设备
@@ -80,7 +80,7 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  @param success 成功
  @param failure 失败
  */
-- (void)reConnectWithTimeOut:(int)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure;
+- (void)reConnectWithTimeOut:(float)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure;
 
 /**
  发送数据
@@ -104,7 +104,7 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
+- (void)sendData:(NSData *)data timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
 
 /**
  取消扫描蓝牙设备

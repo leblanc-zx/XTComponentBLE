@@ -17,7 +17,8 @@ typedef NS_ENUM(NSUInteger, XTBLELogType) { //日志类型
     XTBLELogTypeSendData,       //发送数据
     XTBLELogTypeReceiveData,    //接收数据
     XTBLELogTypeSuccess,        //成功结果
-    XTBLELogTypeFailure         //失败结果
+    XTBLELogTypeFailure,        //失败结果
+    XTBLELogTypeCutom           //自定义日志
 };
 
 void qhd_exchangeInstanceMethod(Class class, SEL originalSelector, SEL newSelector) {
@@ -74,9 +75,9 @@ NSString *BLELogSign;
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)qhd_sendData:(NSData *)data timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+- (void)qhd_sendData:(NSData *)data timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
     //log
-    [self writeToFileWithObject:[NSString stringWithFormat:@"超时时间：%d秒    每帧间隔：%.3lf秒", timeOut, timeInterval] logType:XTBLELogTypeSendSetting];
+    [self writeToFileWithObject:[NSString stringWithFormat:@"超时时间：%.3f秒    每帧间隔：%.3lf秒", timeOut, timeInterval] logType:XTBLELogTypeSendSetting];
     //log
     [self writeToFileWithObject:data logType:XTBLELogTypeSendData];
     
@@ -148,6 +149,15 @@ NSString *BLELogSign;
 }
 
 /**
+ 自定义日志
+
+ @param custom 自定义日志字符串
+ */
+- (void)log_custom:(NSString *)custom {
+    [self writeToFileWithObject:custom logType:XTBLELogTypeCutom];
+}
+
+/**
  获取当前时间
  
  @return yyyy-MM-dd HH:mm:ss
@@ -216,6 +226,13 @@ NSString *BLELogSign;
             [text appendString:@"\n\n@end\n\n"];
         }
             break;
+        case XTBLELogTypeCutom:
+        {
+            [text appendFormat:@"\n\n@begin  method：custom\n"];
+            [text appendFormat:@"\n%@", object];
+            [text appendFormat:@"\n\n@end\n\n"];
+        }
+            break;
             
         default:
             break;
@@ -243,6 +260,41 @@ NSString *BLELogSign;
             [fileHandle closeFile];
         }
     });
+}
+
+/**
+ 获取日志列表
+ 
+ @param months 月份 例：@[@"2019-02", @"2019-03", @"2019-04" ...]
+ @return 日志列表
+ */
+- (NSArray *)getFileListWithMonths:(NSArray <NSString *>*)months {
+    if (![BLELogSign isEqualToString:logPassword]) {
+        return nil;
+    }
+    //获取沙盒路径
+    NSString *doucumentPath  = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject;
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSDirectoryEnumerator *directoryEnumerator = [fileManager enumeratorAtPath:doucumentPath];
+    
+    NSMutableArray *resultList = [[NSMutableArray alloc] init];
+    BOOL isDir = NO;
+    for (NSString *path in directoryEnumerator.allObjects) {
+        
+        BOOL isExist = [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/%@", doucumentPath, path] isDirectory:&isDir];
+        if (!isDir && isExist) {
+            //NSLog(@"%@", path);// 文件路径
+            for (NSString *month in months) {
+                if ([path containsString:[NSString stringWithFormat:@"XTBLEDataLog%@", month]]) {
+                    NSString *fileName = [path stringByReplacingOccurrencesOfString:@"XTBLEDataLog" withString:@""];
+                    [resultList addObject:fileName];
+                }
+            }
+        }
+    }
+    
+    return resultList;
+    
 }
 
 /**

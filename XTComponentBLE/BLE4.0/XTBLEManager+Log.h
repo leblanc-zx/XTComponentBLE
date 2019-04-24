@@ -33,6 +33,21 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)log_method:(NSString *)method startFilter:(NSString *)startFilter endFilter:(NSString *)endFileter;
 
 /**
+ 自定义日志
+ 
+ @param custom 自定义日志字符串
+ */
+- (void)log_custom:(NSString *)custom;
+
+/**
+ 获取日志列表
+ 
+ @param months 月份 例：@[@"2019-02", @"2019-03", @"2019-04" ...]
+ @return 日志列表
+ */
+- (NSArray *)getFileListWithMonths:(NSArray <NSString *>*)months;
+
+/**
  获取日志文件
  
  @param day 日期 yyyy-MM-dd

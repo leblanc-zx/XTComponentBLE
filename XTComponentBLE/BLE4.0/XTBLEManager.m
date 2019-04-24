@@ -143,7 +143,7 @@ static id _instace;
  @param scanBlock 返回扫描到的设备列表
  @param finishBlock 扫描结束
  */
-- (void)scanWithTime:(int)time scanBlock:(ScanBlock)scanBlock finishBlock:(ScanFinishBlock)finishBlock {
+- (void)scanWithTime:(float)time scanBlock:(ScanBlock)scanBlock finishBlock:(ScanFinishBlock)finishBlock {
     if (!self.isBLEEnable) {
         if (finishBlock) {
             finishBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{@"NSLocalizedDescription":@"请打开蓝牙"}]);
@@ -162,7 +162,7 @@ static id _instace;
     if (finishBlock) {
         [self.blockDictionary setObject:finishBlock forKey:SCAN_FINISHBLOCK];
     }
-    int scanTime = time > 0 ? time : 15;
+    float scanTime = time > 0 ? time : 15;
     [self.BLEDevices removeAllObjects];
     
     //开始扫描
@@ -211,7 +211,7 @@ static id _instace;
  @param success 成功
  @param failure 失败
  */
-- (void)connectWithPeripheral:(XTCBPeripheral *)peripheral timeOut:(int)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure {
+- (void)connectWithPeripheral:(XTCBPeripheral *)peripheral timeOut:(float)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure {
     
     if (!self.isBLEEnable) {
         if (failure) {
@@ -244,7 +244,7 @@ static id _instace;
     }
     
     //预备连接
-    int connectTimeOut = timeOut > 0 ? timeOut : 15;
+    float connectTimeOut = timeOut > 0 ? timeOut : 15;
     XTCBPeripheral *lastPeripheral = self.currentPeripheral;
     if (success) {
         [self.blockDictionary setObject:success forKey:CONNECT_SUCCESSBLOCK];
@@ -340,7 +340,7 @@ static id _instace;
  @param success 成功
  @param failure 失败
  */
-- (void)reConnectWithTimeOut:(int)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure {
+- (void)reConnectWithTimeOut:(float)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure {
     [self connectWithPeripheral:self.currentPeripheral timeOut:timeOut success:success failure:failure];
 }
 
@@ -368,7 +368,7 @@ static id _instace;
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+- (void)sendData:(NSData *)data timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
     [self sendData:data characteristic:self.currentPeripheral.writeCharacteristic timeOut:timeOut timeInterval:timeInterval startFilter:startFilter endFilter:endFilter success:success failure:failure];
 }
 
@@ -383,7 +383,7 @@ static id _instace;
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data characteristic:(CBCharacteristic *)characteristic timeOut:(int)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+- (void)sendData:(NSData *)data characteristic:(CBCharacteristic *)characteristic timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
     
     if (!self.isBLEEnable) {
         if (failure) {
@@ -486,7 +486,7 @@ static id _instace;
         return;
     }
     
-    int duration = timeOut > 0 ? timeOut : 10;
+    float duration = timeOut > 0 ? timeOut : 10;
     [self openTimerWithIdentity:TIMER_RECEIVE_DATA timeDuration:duration block:^(TimerState state, NSError *error) {
         
         if (state == TimerStateFinish) {
@@ -655,7 +655,7 @@ static id _instace;
  @param duration 定时时长
  @param block 回调
  */
-- (void)openTimerWithIdentity:(NSString *)identity timeDuration:(int)duration block:(TimerBlock)block {
+- (void)openTimerWithIdentity:(NSString *)identity timeDuration:(float)duration block:(TimerBlock)block {
     
     if (identity.length == 0) {
         return;
