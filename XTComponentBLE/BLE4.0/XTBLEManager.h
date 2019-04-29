@@ -34,7 +34,7 @@ typedef void(^ScanBlock)(NSArray *bleDevices);
 typedef void(^ScanFinishBlock)(NSError *error);
 typedef void(^ConnectSuccessBlock)(void);
 typedef void(^ConnectFailureBlock)(NSError *error);
-typedef void(^DidDisConnectBlock)(CBPeripheral *peripheral, NSError *error);
+typedef void(^ConnectStateDidChangeBlock)(XTCBPeripheral *peripheral, BOOL isRequesting, NSError *error);
 typedef BOOL(^StartFilterData)(NSData *receiveData);
 typedef BOOL(^EndFilterData)(NSData *JointData);
 typedef void(^ReceiveDataSuccessBlock)(NSData *data);
@@ -46,7 +46,6 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
 @property (nonatomic, strong) CBCentralManager *centralManager; //蓝牙管理
 @property (nonatomic, assign, readonly) BOOL isScanning;        //正在扫描
 @property (nonatomic, assign, readonly) BOOL isBLEEnable;       //蓝牙是否可用
-@property (nonatomic, assign, readonly) BOOL isRequesting;      //蓝牙是否正在请求数据
 @property (nonatomic, strong, readonly) XTCBPeripheral *currentPeripheral;      //当前的蓝牙设备
 
 /**
@@ -134,11 +133,11 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
 - (void)doClose;
 
 /**
- 蓝牙连接状态（断开连接）监听
+ 蓝牙连接状态变化(连接/断开)监听
  
- @param didDisConnectBlock 回调
+ @param connectStateDidChangeBlock 回调
  */
-- (void)setBlockOnDidDisConnect:(DidDisConnectBlock)didDisConnectBlock;
+- (void)setBlockOnConnectStateDidChange:(ConnectStateDidChangeBlock)connectStateDidChangeBlock;
 
 
 /**

@@ -22,7 +22,7 @@ NSString *const SCAN_BLOCK = @"SCAN_BLOCK";
 NSString *const SCAN_FINISHBLOCK = @"SCAN_FINISHBLOCK";
 NSString *const CONNECT_SUCCESSBLOCK = @"CONNECT_SUCCESSBLOCK";
 NSString *const CONNECT_FAILUREBLOCK = @"CONNECT_FAILUREBLOCK";
-NSString *const DIDDISCONNECT_BLOCK = @"DIDDISCONNECT_BLOCK";
+NSString *const CONNECTSTATE_DIDCHANGE_BLOCK = @"CONNECTSTATE_DIDCHANGE_BLOCK";
 NSString *const SEND_PROGRESSDATA_BLOCK = @"SEND_PROGRESSDATA_BLOCK";
 NSString *const SEND_STARTFILTER_BLOCK = @"SEND_STARTFILTER_BLOCK";
 NSString *const SEND_ENDFILTER_BLOCK = @"SEND_ENDFILTER_BLOCK";
@@ -309,6 +309,12 @@ static id _instace;
                     [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
                     cahceSuccessBlock();
                 }
+                //连接状态变化回调
+                ConnectStateDidChangeBlock chacheStateDidChangeBlock = [self.blockDictionary objectForKey:CONNECTSTATE_DIDCHANGE_BLOCK];
+                if (chacheStateDidChangeBlock) {
+                    chacheStateDidChangeBlock(self.currentPeripheral, NO, nil);
+                }
+                
             } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnecting) {
                 //连接中
                 [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
@@ -609,12 +615,12 @@ static id _instace;
 }
 
 /**
- 蓝牙连接状态（断开连接）监听
+ 蓝牙连接状态变化(连接/断开)监听
  
- @param didDisConnectBlock 回调
+ @param connectStateDidChangeBlock 回调
  */
-- (void)setBlockOnDidDisConnect:(DidDisConnectBlock)didDisConnectBlock {
-    [self.blockDictionary setObject:didDisConnectBlock forKey:DIDDISCONNECT_BLOCK];
+- (void)setBlockOnConnectStateDidChange:(ConnectStateDidChangeBlock)connectStateDidChangeBlock {
+    [self.blockDictionary setObject:connectStateDidChangeBlock forKey:CONNECTSTATE_DIDCHANGE_BLOCK];
 }
 
 /**
@@ -723,6 +729,14 @@ static id _instace;
     
 }
 
+/**
+ 获取timer
+ */
+- (dispatch_source_t)getTimerWithIdentity:(NSString *)identity {
+    dispatch_source_t timer = [self.timerDictionary objectForKey:identity];
+    return timer;
+}
+
 #pragma -mark CBCentralManagerDelegate
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
     //NSLog(@"===update===%@",central);
@@ -777,13 +791,18 @@ static id _instace;
         }
         //连接成功的断开才需要通知
         self.currentPeripheral.connectState = XTCBPeripheralConnectCanceled;
-        DidDisConnectBlock chacheDidDisConnectBlock = [self.blockDictionary objectForKey:DIDDISCONNECT_BLOCK];
-        if (chacheDidDisConnectBlock) {
-            if (error.code == CBErrorPeripheralDisconnected) {
-                chacheDidDisConnectBlock(peripheral, [NSError errorWithDomain:error.domain code:error.code userInfo:@{@"NSLocalizedDescription": @"断开连接"}]);
-            } else {
-                chacheDidDisConnectBlock(peripheral, error);
-            }
+        NSError *blockError = [NSError errorWithDomain:@"错误" code:110 userInfo:@{@"NSLocalizedDescription": @"断开连接"}];
+        
+        //获取Timer
+        dispatch_source_t timer = [self getTimerWithIdentity:TIMER_RECEIVE_DATA];
+        
+        ConnectStateDidChangeBlock chacheStateDidChangeBlock = [self.blockDictionary objectForKey:CONNECTSTATE_DIDCHANGE_BLOCK];
+        if (chacheStateDidChangeBlock) {
+            chacheStateDidChangeBlock(self.currentPeripheral, timer ? YES : NO, blockError);
+        }
+        //正在请求数据，直接断开
+        if (timer) {
+            [self cancelReceiveData:blockError];
         }
         
     }
