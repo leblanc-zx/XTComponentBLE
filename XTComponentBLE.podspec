@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'XTComponentBLE'
-  s.version          = '1.0.8'
+  s.version          = '1.0.9'
   s.summary          = 'XTComponentBLE.描述'
 
 # This description is used to generate tags and improve search results.
