@@ -28,6 +28,14 @@ typedef NS_ENUM(NSUInteger, XTBLENSErrorCode) {
     XTBLENSErrorCodeReceiveTimeOut = 1010,  //接收超时
     XTBLENSErrorCodeReceiveCanceled = 1011, //接收被取消
     XTBLENSErrorCodeAutoCancelLastTimerTask = 1012,  //自动取消上个TIMER任务
+    XTBLENSErrorCodeStartFilterFailed = 10013,       //开头过滤失败
+    XTBLENSErrorCodeEndFilterFailed = 10014,         //结尾过滤失败
+};
+
+typedef NS_ENUM(NSUInteger, XTBLEFilterResult) {
+    XTBLEFilterResultFailure,   //过滤失败
+    XTBLEFilterResultSuccess,   //过滤成功
+    XTBLEFilterResultWait,      //过滤等待
 };
 
 typedef void(^ScanBlock)(NSArray *bleDevices);
@@ -35,8 +43,9 @@ typedef void(^ScanFinishBlock)(NSError *error);
 typedef void(^ConnectSuccessBlock)(void);
 typedef void(^ConnectFailureBlock)(NSError *error);
 typedef void(^ConnectStateDidChangeBlock)(XTCBPeripheral *peripheral, BOOL isRequesting, NSError *error);
-typedef BOOL(^StartFilterData)(NSData *receiveData);
-typedef BOOL(^EndFilterData)(NSData *JointData);
+typedef XTBLEFilterResult(^StartFilterData)(NSData *receiveData);
+typedef XTBLEFilterResult(^EndFilterData)(NSData *JointData);
+typedef void(^ReceiveDataProgressBlock)(int totalNum, int successNum, int failureNum, NSData *thisData, NSError *error);
 typedef void(^ReceiveDataSuccessBlock)(NSData *data);
 typedef void(^ReceiveDataFailureBlock)(NSError *error);
 typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
@@ -85,6 +94,17 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  发送数据
  
  @param data 帧数据
+ @param startFilter 开始条件(YES:过滤成功; NO:过滤等待)
+ @param endFilter 结束条件(YES:过滤成功; NO:过滤等待)
+ @param success 处理并拼接后的帧数据
+ @param failure 出错
+ */
+- (void)sendSimpleData:(NSData *)data startFilter:(BOOL(^)(NSData *receiveData))startFilter endFilter:(BOOL(^)(NSData *JointData))endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
+
+/**
+ 发送数据
+ 
+ @param data 帧数据
  @param startFilter 开始条件
  @param endFilter 结束条件
  @param success 处理并拼接后的帧数据
@@ -104,6 +124,21 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  @param failure 出错
  */
 - (void)sendData:(NSData *)data timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
+
+/**
+ 发送数据
+ 
+ @param data 帧数据
+ @param receiveNum 接收帧数据个数
+ @param timeOut 超时时间
+ @param timeInterval 发送帧时间间隔 0.0~1.0之间
+ @param startFilter 开始条件
+ @param endFilter 结束条件
+ @param progress 过程(可能发一次帧，接收多个结果)
+ @param success 处理并拼接后的帧数据
+ @param failure 出错
+ */
+- (void)sendData:(NSData *)data receiveNum:(int)receiveNum timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter progress:(ReceiveDataProgressBlock)progress success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure;
 
 /**
  取消扫描蓝牙设备

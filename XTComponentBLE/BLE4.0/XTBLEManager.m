@@ -35,20 +35,27 @@ NSString *const CENTRALMANAGER_DIDUPDATESTATE_BLOCK = @"CENTRALMANAGER_DIDUPDATE
 /*----BlockDic----*/
 @property (nonatomic, strong) NSMutableDictionary *blockDictionary;
 
+/*----临时BlockDic----*/
+@property (nonatomic, strong) NSMutableDictionary *blockTempDictionary;
+
 /*----Timer----*/
 @property (nonatomic, strong) NSMutableDictionary *timerDictionary;
 
 /*----Scan----*/
 @property (nonatomic, strong) NSMutableArray *BLEDevices;
-@property (nonatomic, assign) BOOL isScanning;        //正在扫描
+@property (nonatomic, assign) BOOL isScanning;                  //正在扫描
 
 /*----connect----*/
-@property (nonatomic, strong) XTCBPeripheral *currentPeripheral;         //当前的蓝牙设备
+@property (nonatomic, strong) XTCBPeripheral *currentPeripheral;//当前的蓝牙设备
 
-/*----发送数据----*/
-@property (nonatomic, strong) NSMutableData *responseData;
+/*----响应数据----*/
+@property (nonatomic, strong) NSMutableData *responseData;          //总拼接
+@property (nonatomic, strong) NSMutableData *progressSuccessData;   //过程中本次成功的数据拼接
+@property (nonatomic, assign) int totalNum;                         //应该响应的总数据量
+@property (nonatomic, assign) int progressSuccessNum;               //过程中成功接收到的数据量
+@property (nonatomic, assign) int progressFailureNum;               //过程中失败的数据量
 
-@property (nonatomic, assign) BOOL isBLEEnable;       //蓝牙是否可用
+@property (nonatomic, assign) BOOL isBLEEnable;     //蓝牙是否可用
 
 
 @end
@@ -127,6 +134,18 @@ static id _instace;
 }
 
 /**
+ 创建临时Block字典
+ 
+ @return NSMutableDictionary
+ */
+- (NSMutableDictionary *)blockTempDictionary {
+    if (!_blockTempDictionary) {
+        _blockTempDictionary = [[NSMutableDictionary alloc] init];
+    }
+    return _blockTempDictionary;
+}
+
+/**
  *  创建蓝牙管理
  */
 - (void)createBLEManager {
@@ -146,7 +165,7 @@ static id _instace;
 - (void)scanWithTime:(float)time scanBlock:(ScanBlock)scanBlock finishBlock:(ScanFinishBlock)finishBlock {
     if (!self.isBLEEnable) {
         if (finishBlock) {
-            finishBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{@"NSLocalizedDescription":@"请打开蓝牙"}]);
+            finishBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{NSLocalizedDescriptionKey:@"请打开蓝牙"}]);
         }
         return;
     }
@@ -215,7 +234,7 @@ static id _instace;
     
     if (!self.isBLEEnable) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{@"NSLocalizedDescription":@"请打开蓝牙"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{NSLocalizedDescriptionKey:@"请打开蓝牙"}]);
         }
         return;
     }
@@ -224,21 +243,21 @@ static id _instace;
     if (self.currentPeripheral && self.currentPeripheral.connectState == XTCBPeripheralConnecting) {
         if (failure) {
             NSString *msg = [NSString stringWithFormat:@"正在连接%@,请稍后再试",self.currentPeripheral.peripheral.name];
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{@"NSLocalizedDescription":msg}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey:msg}]);
         }
         return;
     }
     
     if (!peripheral) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeNotDevice userInfo:@{@"NSLocalizedDescription":@"请选择要连接的蓝牙设备"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeNotDevice userInfo:@{NSLocalizedDescriptionKey:@"请选择要连接的蓝牙设备"}]);
         }
         return;
     }
     
     if ([peripheral.peripheral.identifier.UUIDString isEqualToString:self.currentPeripheral.peripheral.identifier.UUIDString] && self.currentPeripheral.connectState == XTCBPeripheralConnectSuccess) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{@"NSLocalizedDescription":@"已连接该蓝牙设备"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey:@"已连接该蓝牙设备"}]);
         }
         return;
     }
@@ -276,7 +295,7 @@ static id _instace;
             ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
             if (cacheFailureBlock) {
                 [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
-                cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectTimeOut userInfo:@{@"NSLocalizedDescription":@"连接超时"}]);
+                cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectTimeOut userInfo:@{NSLocalizedDescriptionKey:@"连接超时"}]);
             }
             
         } else if (state == TimerStateCancel) {
@@ -322,7 +341,7 @@ static id _instace;
                 ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
                 if (cacheFailureBlock) {
                     [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
-                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{@"NSLocalizedDescription": @"代码异常"}]);
+                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey: @"代码异常"}]);
                 }
             } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralNotConnected) {
                 //未连接
@@ -331,7 +350,7 @@ static id _instace;
                 ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
                 if (cacheFailureBlock) {
                     [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
-                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{@"NSLocalizedDescription": @"代码异常"}]);
+                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey: @"代码异常"}]);
                 }
             }
         }
@@ -348,6 +367,36 @@ static id _instace;
  */
 - (void)reConnectWithTimeOut:(float)timeOut success:(ConnectSuccessBlock)success failure:(ConnectFailureBlock)failure {
     [self connectWithPeripheral:self.currentPeripheral timeOut:timeOut success:success failure:failure];
+}
+
+/**
+ 发送数据
+ 
+ @param data 帧数据
+ @param startFilter 开始条件(YES:过滤成功; NO:过滤等待)
+ @param endFilter 结束条件(YES:过滤成功; NO:过滤等待)
+ @param success 处理并拼接后的帧数据
+ @param failure 出错
+ */
+- (void)sendSimpleData:(NSData *)data startFilter:(BOOL(^)(NSData *receiveData))startFilter endFilter:(BOOL(^)(NSData *JointData))endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+    
+    StartFilterData startFilterBlock = nil;
+    if (startFilter) {
+        startFilterBlock = ^XTBLEFilterResult(NSData *receiveData) {
+            BOOL result = startFilter(receiveData);
+            return result == YES ? XTBLEFilterResultSuccess : XTBLEFilterResultWait;
+        };
+    }
+    
+    EndFilterData endFilterBlock = nil;
+    if (endFilter) {
+        endFilterBlock = ^XTBLEFilterResult(NSData *JointData) {
+            BOOL result = endFilter(JointData);
+            return result == YES ? XTBLEFilterResultSuccess : XTBLEFilterResultWait;
+        };
+    }
+    
+    [self sendData:data startFilter:startFilterBlock endFilter:endFilterBlock success:success failure:failure];
 }
 
 /**
@@ -375,56 +424,94 @@ static id _instace;
  @param failure 出错
  */
 - (void)sendData:(NSData *)data timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
-    [self sendData:data characteristic:self.currentPeripheral.writeCharacteristic timeOut:timeOut timeInterval:timeInterval startFilter:startFilter endFilter:endFilter success:success failure:failure];
+    [self sendData:data receiveNum:1 timeOut:timeOut timeInterval:timeInterval startFilter:startFilter endFilter:endFilter progress:nil success:success failure:failure];
+}
+
+/**
+ 发送数据
+ 
+ @param data 帧数据
+ @param receiveNum 接收帧数据个数
+ @param timeOut 超时时间
+ @param timeInterval 发送帧时间间隔 0.0~1.0之间
+ @param startFilter 开始条件
+ @param endFilter 结束条件
+ @param progress 过程(可能发一次帧，接收多个结果)
+ @param success 处理并拼接后的帧数据
+ @param failure 出错
+ */
+- (void)sendData:(NSData *)data receiveNum:(int)receiveNum timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter progress:(ReceiveDataProgressBlock)progress success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+    [self sendData:data receiveNum:receiveNum characteristic:self.currentPeripheral.writeCharacteristic timeOut:timeOut timeInterval:timeInterval startFilter:startFilter endFilter:endFilter progress:progress success:success failure:failure];
 }
 
 /**
  发送数据
 
  @param data 帧数据
+ @param receiveNum 接收帧数据个数
  @param timeOut 超时时间
  @param timeInterval 发送帧时间间隔 0.0~1.0之间
  @param startFilter 开始条件
  @param endFilter 结束条件
+ @param progress 过程(可能发一次帧，接收多个结果)
  @param success 处理并拼接后的帧数据
  @param failure 出错
  */
-- (void)sendData:(NSData *)data characteristic:(CBCharacteristic *)characteristic timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
+- (void)sendData:(NSData *)data receiveNum:(int)receiveNum characteristic:(CBCharacteristic *)characteristic timeOut:(float)timeOut timeInterval:(float)timeInterval startFilter:(StartFilterData)startFilter endFilter:(EndFilterData)endFilter progress:(ReceiveDataProgressBlock)progress success:(ReceiveDataSuccessBlock)success failure:(ReceiveDataFailureBlock)failure {
     
     if (!self.isBLEEnable) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{@"NSLocalizedDescription":@"请打开蓝牙"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeBLENotEnable userInfo:@{NSLocalizedDescriptionKey:@"请打开蓝牙"}]);
         }
         return;
     }
     
     if (self.currentPeripheral.peripheral.state != CBPeripheralStateConnected) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeNotConnect userInfo:@{@"NSLocalizedDescription": @"请先连接蓝牙"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeNotConnect userInfo:@{NSLocalizedDescriptionKey: @"请先连接蓝牙"}]);
         }
         return;
     }
     if (self.currentPeripheral.connectState != XTCBPeripheralConnectSuccess) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{@"NSLocalizedDescription": @"没有发现写特性"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{NSLocalizedDescriptionKey: @"没有发现写特性"}]);
         }
         return;
     }
     if (data.length > LimitLength && timeInterval > 1) {
         if (failure) {
-            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{@"NSLocalizedDescription": @"每帧发送时间间隔不能大于1秒"}]);
+            failure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{NSLocalizedDescriptionKey: @"每帧发送时间间隔不能大于1秒"}]);
         }
         return;
     }
     
     //预备发送数据
     self.responseData = [[NSMutableData alloc] init];
+    self.progressSuccessData = [[NSMutableData alloc] init];
+    
+    //应该响应数据总数
+    self.totalNum = receiveNum;
+    self.progressSuccessNum = 0;
+    self.progressFailureNum = 0;
+    
+    //清空临时字典
+    [self.blockTempDictionary removeAllObjects];
+    
+    //清空blockDictionary
+    [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];
+    [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];
+    [self.blockDictionary removeObjectForKey:SEND_PROGRESSDATA_BLOCK];
+    [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATASUCCESS_BLOCK];
+    [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATAFAILURE_BLOCK];
     
     if (startFilter) {
         [self.blockDictionary setObject:startFilter forKey:SEND_STARTFILTER_BLOCK];
     }
     if (endFilter) {
         [self.blockDictionary setObject:endFilter forKey:SEND_ENDFILTER_BLOCK];
+    }
+    if (progress) {
+        [self.blockDictionary setObject:progress forKey:SEND_PROGRESSDATA_BLOCK];
     }
     if (success) {
         [self.blockDictionary setObject:success forKey:SEND_RECEIVEDATASUCCESS_BLOCK];
@@ -477,12 +564,13 @@ static id _instace;
         }
         
     } else {
-        error = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{@"NSLocalizedDescription": @"特性不可写"}];
+        error = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeSendFailed userInfo:@{NSLocalizedDescriptionKey: @"特性不可写"}];
     }
     
     if (error) {
         [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];
         [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];
+        [self.blockDictionary removeObjectForKey:SEND_PROGRESSDATA_BLOCK];
         [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATASUCCESS_BLOCK];
         ReceiveDataFailureBlock cacheReceiveDataFailure = [self.blockDictionary objectForKey:SEND_RECEIVEDATAFAILURE_BLOCK];
         if (cacheReceiveDataFailure) {
@@ -499,11 +587,12 @@ static id _instace;
             //timer正常结束，超时了
             [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];
             [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];
+            [self.blockDictionary removeObjectForKey:SEND_PROGRESSDATA_BLOCK];
             [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATASUCCESS_BLOCK];
             ReceiveDataFailureBlock cacheReceiveDataFailure = [self.blockDictionary objectForKey:SEND_RECEIVEDATAFAILURE_BLOCK];
             if (cacheReceiveDataFailure) {
                 [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATAFAILURE_BLOCK];
-                cacheReceiveDataFailure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeReceiveTimeOut userInfo:@{@"NSLocalizedDescription": @"请求超时"}]);
+                cacheReceiveDataFailure([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeReceiveTimeOut userInfo:@{NSLocalizedDescriptionKey: @"请求超时"}]);
             }
         }
         if (state == TimerStateCancel) {
@@ -514,6 +603,7 @@ static id _instace;
                 //数据接收异常 || 数据接收被取消
                 [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];
                 [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];
+                [self.blockDictionary removeObjectForKey:SEND_PROGRESSDATA_BLOCK];
                 [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATASUCCESS_BLOCK];
                 ReceiveDataFailureBlock cacheReceiveDataFailure = [self.blockDictionary objectForKey:SEND_RECEIVEDATAFAILURE_BLOCK];
                 if (cacheReceiveDataFailure) {
@@ -524,6 +614,7 @@ static id _instace;
                 //接收数据完成
                 [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];
                 [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];
+                [self.blockDictionary removeObjectForKey:SEND_PROGRESSDATA_BLOCK];
                 [self.blockDictionary removeObjectForKey:SEND_RECEIVEDATAFAILURE_BLOCK];
                 ReceiveDataSuccessBlock cacheReceiveDataSuccess = [self.blockDictionary objectForKey:SEND_RECEIVEDATASUCCESS_BLOCK];
                 if (cacheReceiveDataSuccess) {
@@ -540,7 +631,7 @@ static id _instace;
  取消扫描蓝牙设备
  */
 - (void)cancelScan {
-    [self cancelTimerWithIdentity:TIMER_SCAN error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeScanCanceled userInfo:@{@"NSLocalizedDescription": @"扫描被取消"}]];
+    [self cancelTimerWithIdentity:TIMER_SCAN error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeScanCanceled userInfo:@{NSLocalizedDescriptionKey: @"扫描被取消"}]];
 }
 
 /**
@@ -567,7 +658,7 @@ static id _instace;
     if (self.currentPeripheral.connectState == XTCBPeripheralConnecting) {
         //连接中
         self.currentPeripheral.connectState = XTCBPeripheralConnectCanceled;
-        [self cancelTimerWithIdentity:TIMER_CONNECT error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectCanceled userInfo:@{@"NSLocalizedDescription": @"连接被取消"}]];
+        [self cancelTimerWithIdentity:TIMER_CONNECT error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectCanceled userInfo:@{NSLocalizedDescriptionKey: @"连接被取消"}]];
     }
 }
 
@@ -589,7 +680,7 @@ static id _instace;
  取消接收数据
  */
 - (void)cancelReceiveData {
-    [self cancelTimerWithIdentity:TIMER_RECEIVE_DATA error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeReceiveCanceled userInfo:@{@"NSLocalizedDescription": @"请求被取消"}]];
+    [self cancelTimerWithIdentity:TIMER_RECEIVE_DATA error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeReceiveCanceled userInfo:@{NSLocalizedDescriptionKey: @"请求被取消"}]];
 }
 
 /**
@@ -641,7 +732,7 @@ static id _instace;
  */
 - (void)changeDeviceName:(NSString *)deviceName success:(void (^)())success failure:(void (^)(NSError *error))failure {
     NSData *requestData = [deviceName dataUsingEncoding:NSUTF8StringEncoding];
-    [self sendData:requestData characteristic:self.currentPeripheral.nameCharacteristic timeOut:10 timeInterval:0 startFilter:nil endFilter:nil success:^(NSData *data) {
+    [self sendData:requestData receiveNum:1 characteristic:self.currentPeripheral.nameCharacteristic timeOut:10 timeInterval:0 startFilter:nil endFilter:nil progress:nil success:^(NSData *data) {
         if (success) {
             success();
         }
@@ -673,7 +764,7 @@ static id _instace;
     //移除上次任务
     dispatch_source_t timer = [self.timerDictionary objectForKey:identity];
     if (timer) {
-        NSError *error = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeAutoCancelLastTimerTask userInfo:@{@"NSLocalizedDescription": @"移除上次任务"}];
+        NSError *error = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeAutoCancelLastTimerTask userInfo:@{NSLocalizedDescriptionKey: @"移除上次任务"}];
         [self cancelTimerWithIdentity:identity error:error];
     }
     
@@ -791,7 +882,7 @@ static id _instace;
         }
         //连接成功的断开才需要通知
         self.currentPeripheral.connectState = XTCBPeripheralConnectCanceled;
-        NSError *blockError = [NSError errorWithDomain:@"错误" code:110 userInfo:@{@"NSLocalizedDescription": @"断开连接"}];
+        NSError *blockError = [NSError errorWithDomain:@"错误" code:110 userInfo:@{NSLocalizedDescriptionKey: @"断开连接"}];
         
         //获取Timer
         dispatch_source_t timer = [self getTimerWithIdentity:TIMER_RECEIVE_DATA];
@@ -894,45 +985,102 @@ static id _instace;
         [self cancelTimerWithIdentity:TIMER_RECEIVE_DATA error:error];
     }
     
+    //progress
+    ReceiveDataProgressBlock progressBlock = [self.blockDictionary objectForKey:SEND_PROGRESSDATA_BLOCK];
+    
     //开始拼接条件
     StartFilterData startFilterDataBlock = [self.blockDictionary objectForKey:SEND_STARTFILTER_BLOCK];
     if (startFilterDataBlock) {
         //设置了条件
-        BOOL canStartJoint = startFilterDataBlock(characteristic.value);
-        if (!canStartJoint) {
-            //还不能开始，就一直等待
+        XTBLEFilterResult startFilterResult = startFilterDataBlock(characteristic.value);
+        if (startFilterResult == XTBLEFilterResultWait) {
+            //等待
             return;
+        } else if (startFilterResult == XTBLEFilterResultFailure) {
+            //开头过滤失败
+            NSError *startFilterError = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeStartFilterFailed userInfo:@{NSLocalizedDescriptionKey: @"开头过滤失败"}];
+            self.progressFailureNum ++;
+            if (progressBlock) {
+                progressBlock(self.totalNum, self.progressSuccessNum, self.progressFailureNum, nil, startFilterError);
+            }
+            if (self.totalNum == self.progressFailureNum) {
+                //所有都过滤失败了，取消接收数据
+                [self cancelReceiveData:startFilterError];
+            }
+            return;
+        } else {
+            //开头过滤成功，往下执行
+            [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];//开始条件暂时不需要了
+            [self.blockTempDictionary setObject:startFilterDataBlock forKey:SEND_STARTFILTER_BLOCK];//存入临时字典中
         }
     }
     
-    //可以开始拼接了：未设置开始条件 || 条件已通过
-    [self.blockDictionary removeObjectForKey:SEND_STARTFILTER_BLOCK];//开始条件已经不需要了
+    /*---可以开始拼接了：未设置开始条件 or 条件已通过---*/
     
     //拼接数据
-    [self.responseData appendData:characteristic.value];
+    [self.progressSuccessData appendData:characteristic.value];
     
     //结束拼接条件
     EndFilterData endFilterDataBlock = [self.blockDictionary objectForKey:SEND_ENDFILTER_BLOCK];
     if (endFilterDataBlock) {
         //设置了条件
-        BOOL canEndJoint = endFilterDataBlock(self.responseData);
-        if (!canEndJoint) {
-            //还不能结束，就一直等待
+        XTBLEFilterResult endFilterResult = endFilterDataBlock(self.progressSuccessData);
+        if (endFilterResult == XTBLEFilterResultWait) {
+            //等待
             return;
+        } else if (endFilterResult == XTBLEFilterResultFailure) {
+            //结尾过滤失败
+            NSError *endFilterError = [NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeStartFilterFailed userInfo:@{NSLocalizedDescriptionKey: @"结尾过滤失败"}];
+            self.progressFailureNum ++;
+            if (progressBlock) {
+                progressBlock(self.totalNum, self.progressSuccessNum, self.progressFailureNum, nil, endFilterError);
+            }
+            if (self.totalNum == self.progressFailureNum) {
+                //所有都过滤失败了，取消接收数据
+                [self cancelReceiveData:endFilterError];
+            }
+            return;
+        } else {
+            //结尾过滤成功，往下执行
+            [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];//结尾条件暂时不需要了
+            [self.blockTempDictionary setObject:endFilterDataBlock forKey:SEND_ENDFILTER_BLOCK];//存入临时字典中
         }
     }
     
-    //可以结束了
+    //一条数据拼接完成了
+    [self.responseData appendData:self.progressSuccessData];
+    NSData *thisData = self.progressSuccessData;
+    self.progressSuccessData = [[NSMutableData alloc] init];
+    
     if (endFilterDataBlock) {
         //设置了条件，并且已经通过了
-        [self.blockDictionary removeObjectForKey:SEND_ENDFILTER_BLOCK];//结束条件已经不需要了
-        [self receiveDataFinish:nil];
+        self.progressSuccessNum ++;
+        
+        if (progressBlock) {
+            progressBlock(self.totalNum, self.progressSuccessNum, self.progressFailureNum, thisData, nil);
+        }
+        
+        if (self.totalNum <= self.progressSuccessNum + self.progressFailureNum) {
+            //结束了
+            [self receiveDataFinish:nil];
+        } else {
+            //还要接收下一条数据
+            StartFilterData tempStart = [self.blockTempDictionary objectForKey:SEND_STARTFILTER_BLOCK];
+            if (tempStart) {
+                [self.blockDictionary setObject:tempStart forKey:SEND_STARTFILTER_BLOCK];
+            }
+            EndFilterData tempEnd = [self.blockTempDictionary objectForKey:SEND_ENDFILTER_BLOCK];
+            if (tempEnd) {
+                [self.blockDictionary setObject:tempEnd forKey:SEND_ENDFILTER_BLOCK];
+            }
+        }
     } else {
         //未设置条件
         //如果0.5秒内未再接收到数据，那么就结束了
         [NSObject cancelPreviousPerformRequestsWithTarget:self];
         [self performSelector:@selector(receiveDataFinish:) withObject:characteristic afterDelay:0.5];
     }
+    
     
 }
 
