@@ -1003,8 +1003,8 @@ static id _instace;
             if (progressBlock) {
                 progressBlock(self.totalNum, self.progressSuccessNum, self.progressFailureNum, nil, startFilterError);
             }
-            if (self.totalNum == self.progressFailureNum) {
-                //所有都过滤失败了，取消接收数据
+            if (self.totalNum <= self.progressFailureNum + self.progressSuccessNum) {
+                //过滤到最后一条数据了，取消接收数据
                 [self cancelReceiveData:startFilterError];
             }
             return;
@@ -1035,8 +1035,8 @@ static id _instace;
             if (progressBlock) {
                 progressBlock(self.totalNum, self.progressSuccessNum, self.progressFailureNum, nil, endFilterError);
             }
-            if (self.totalNum == self.progressFailureNum) {
-                //所有都过滤失败了，取消接收数据
+            if (self.totalNum <= self.progressFailureNum + self.progressSuccessNum) {
+                //过滤到最后一条数据了，取消接收数据
                 [self cancelReceiveData:endFilterError];
             }
             return;
