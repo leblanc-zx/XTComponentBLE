@@ -43,10 +43,9 @@ NSString *const CENTRALMANAGER_DIDUPDATESTATE_BLOCK = @"CENTRALMANAGER_DIDUPDATE
 
 /*----Scan----*/
 @property (nonatomic, strong) NSMutableArray *BLEDevices;
-@property (nonatomic, assign) BOOL isScanning;                  //正在扫描
 
 /*----connect----*/
-@property (nonatomic, strong) XTCBPeripheral *currentPeripheral;//当前的蓝牙设备
+@property (nonatomic, strong) XTCBPeripheral *currentPeripheral;    //当前的蓝牙设备
 
 /*----响应数据----*/
 @property (nonatomic, strong) NSMutableData *responseData;          //总拼接
@@ -146,12 +145,38 @@ static id _instace;
 }
 
 /**
+ 是否正在扫描
+
+ @return 结果
+ */
+- (BOOL)isScanning {
+    
+    dispatch_source_t timer = [self getTimerWithIdentity:TIMER_SCAN];
+    return timer ? YES : NO;
+    
+}
+
+/**
+ 是否正在请求帧数据
+
+ @return 结果
+ */
+- (BOOL)isRequesting {
+    
+    dispatch_source_t timer = [self getTimerWithIdentity:TIMER_RECEIVE_DATA];
+    return timer ? YES : NO;
+    
+}
+
+/**
  *  创建蓝牙管理
  */
 - (void)createBLEManager {
     
     // 1.创建管理中心
     self.centralManager = [[CBCentralManager alloc]initWithDelegate:self queue:dispatch_get_main_queue() options:nil];
+    // 2.蓝牙连接状态变化监听
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(XTCBPeripheralConnectStateChange:) name:XTCBPeripheralConnectStateChangeKey object:nil];
     
 }
 
@@ -185,7 +210,6 @@ static id _instace;
     [self.BLEDevices removeAllObjects];
     
     //开始扫描
-    self.isScanning = YES;
     [self.centralManager scanForPeripheralsWithServices:nil options:nil];
     
     //开启定时器
@@ -197,7 +221,6 @@ static id _instace;
         
         if (state == TimerStateFinish) {
             //timer时间到了,扫描结束
-            weakSelf.isScanning = NO;
             [weakSelf.centralManager stopScan];
             if (cahcheFinishBlock) {
                 [self.blockDictionary removeObjectForKey:SCAN_FINISHBLOCK];
@@ -209,7 +232,6 @@ static id _instace;
                 //自动移除上次任务 do nothing
             } else {
                 //扫描被取消了
-                self.isScanning = NO;
                 [self.centralManager stopScan];
                 if (cahcheFinishBlock) {
                     [self.blockDictionary removeObjectForKey:SCAN_FINISHBLOCK];
@@ -239,7 +261,7 @@ static id _instace;
         return;
     }
     
-    //正在连接
+    //正在连接中,稍后再试
     if (self.currentPeripheral && self.currentPeripheral.connectState == XTCBPeripheralConnecting) {
         if (failure) {
             NSString *msg = [NSString stringWithFormat:@"正在连接%@,请稍后再试",self.currentPeripheral.peripheral.name];
@@ -271,8 +293,8 @@ static id _instace;
     if (failure) {
         [self.blockDictionary setObject:failure forKey:CONNECT_FAILUREBLOCK];
     }
-    _currentPeripheral = peripheral;
-    _currentPeripheral.connectState = XTCBPeripheralConnecting;
+    
+    self.currentPeripheral = peripheral;
     
     //自动断开上个连接
     if (lastPeripheral) {
@@ -283,6 +305,8 @@ static id _instace;
     //开始连接
     [self.centralManager connectPeripheral:self.currentPeripheral.peripheral options:@{CBConnectPeripheralOptionNotifyOnConnectionKey:@YES,CBConnectPeripheralOptionNotifyOnDisconnectionKey:@YES,CBConnectPeripheralOptionNotifyOnNotificationKey:@YES}];
     peripheral.peripheral.delegate = self;
+    
+    self.currentPeripheral.connectState = XTCBPeripheralConnecting;
     
     //开启定时器
     __weak typeof(self) weakSelf = self;
@@ -302,8 +326,26 @@ static id _instace;
             //timer被取消
             if (error.code == XTBLENSErrorCodeAutoCancelLastTimerTask) {
                 //自动移除上次任务 do nothing
-            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnectFailed) {
-                //连接失败
+            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralNotConnected) {
+                //未连接
+                [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
+                [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
+                ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
+                if (cacheFailureBlock) {
+                    [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
+                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey: @"代码异常"}]);
+                }
+            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnecting) {
+                //连接中
+                [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
+                [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
+                ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
+                if (cacheFailureBlock) {
+                    [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
+                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey: @"代码异常"}]);
+                }
+            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnectingCanceled) {
+                //连接中被取消
                 [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
                 [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
                 ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
@@ -311,8 +353,8 @@ static id _instace;
                     [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
                     cacheFailureBlock(error);
                 }
-            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnectCanceled) {
-                //连接被取消
+            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnectFailed) {
+                //连接失败
                 [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
                 [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
                 ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
@@ -328,29 +370,14 @@ static id _instace;
                     [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
                     cahceSuccessBlock();
                 }
-                //连接状态变化回调
-                ConnectStateDidChangeBlock chacheStateDidChangeBlock = [self.blockDictionary objectForKey:CONNECTSTATE_DIDCHANGE_BLOCK];
-                if (chacheStateDidChangeBlock) {
-                    chacheStateDidChangeBlock(self.currentPeripheral, NO, nil);
-                }
-                
-            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralConnecting) {
-                //连接中
+            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralDidDisconnect) {
+                //连接成功后,断开连接
                 [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
                 [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
                 ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
                 if (cacheFailureBlock) {
                     [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
-                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey: @"代码异常"}]);
-                }
-            } else if (weakSelf.currentPeripheral.connectState == XTCBPeripheralNotConnected) {
-                //未连接
-                [weakSelf.centralManager cancelPeripheralConnection:weakSelf.currentPeripheral.peripheral];
-                [self.blockDictionary removeObjectForKey:CONNECT_SUCCESSBLOCK];
-                ConnectFailureBlock cacheFailureBlock = [self.blockDictionary objectForKey:CONNECT_FAILUREBLOCK];
-                if (cacheFailureBlock) {
-                    [self.blockDictionary removeObjectForKey:CONNECT_FAILUREBLOCK];
-                    cacheFailureBlock([NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectFailed userInfo:@{NSLocalizedDescriptionKey: @"代码异常"}]);
+                    cacheFailureBlock(error);
                 }
             }
         }
@@ -651,13 +678,18 @@ static id _instace;
  */
 - (void)cancelConnecting {
     
-    if (self.currentPeripheral.connectState == XTCBPeripheralNotConnected || self.currentPeripheral.connectState == XTCBPeripheralConnectFailed || self.currentPeripheral.connectState == XTCBPeripheralConnectTimeOut || self.currentPeripheral.connectState == XTCBPeripheralConnectCanceled || self.currentPeripheral.connectState == XTCBPeripheralConnectSuccess) {
-        //未连接、连接失败、连接超时、已被取消过了、已连接成功了，不做处理
+    if (self.currentPeripheral.connectState == XTCBPeripheralNotConnected ||
+        self.currentPeripheral.connectState == XTCBPeripheralConnectFailed ||
+        self.currentPeripheral.connectState == XTCBPeripheralConnectTimeOut ||
+        self.currentPeripheral.connectState == XTCBPeripheralConnectingCanceled ||
+        self.currentPeripheral.connectState == XTCBPeripheralConnectSuccess ||
+        self.currentPeripheral.connectState == XTCBPeripheralDidDisconnect) {
+        //【未连接、连接失败、连接超时、连接中已被取消、连接成功、连接成功后断开连接】不做处理
         return;
     }
     if (self.currentPeripheral.connectState == XTCBPeripheralConnecting) {
         //连接中
-        self.currentPeripheral.connectState = XTCBPeripheralConnectCanceled;
+        self.currentPeripheral.connectState = XTCBPeripheralConnectingCanceled;
         [self cancelTimerWithIdentity:TIMER_CONNECT error:[NSError errorWithDomain:@"错误" code:XTBLENSErrorCodeConnectCanceled userInfo:@{NSLocalizedDescriptionKey: @"连接被取消"}]];
     }
 }
@@ -714,6 +746,22 @@ static id _instace;
     [self.blockDictionary setObject:connectStateDidChangeBlock forKey:CONNECTSTATE_DIDCHANGE_BLOCK];
 }
 
+- (void)XTCBPeripheralConnectStateChange:(NSNotification *)noti {
+    
+    XTCBPeripheral *peripheral = noti.object;
+    
+    if (self.currentPeripheral && self.currentPeripheral == peripheral) {
+        
+        XTCBPeripheralConnectState connectState = peripheral.connectState;
+        
+        ConnectStateDidChangeBlock chacheStateDidChangeBlock = [self.blockDictionary objectForKey:CONNECTSTATE_DIDCHANGE_BLOCK];
+        
+        if (chacheStateDidChangeBlock) {
+            chacheStateDidChangeBlock(connectState);
+        }
+    }
+}
+
 /**
  设备状态改变的委托
  
@@ -730,7 +778,7 @@ static id _instace;
  @param success success
  @param failure error
  */
-- (void)changeDeviceName:(NSString *)deviceName success:(void (^)())success failure:(void (^)(NSError *error))failure {
+- (void)changeDeviceName:(NSString *)deviceName success:(void (^)(void))success failure:(void (^)(NSError *error))failure {
     NSData *requestData = [deviceName dataUsingEncoding:NSUTF8StringEncoding];
     [self sendData:requestData receiveNum:1 characteristic:self.currentPeripheral.nameCharacteristic timeOut:10 timeInterval:0 startFilter:nil endFilter:nil progress:nil success:^(NSData *data) {
         if (success) {
@@ -876,23 +924,22 @@ static id _instace;
     
     if ([peripheral.identifier.UUIDString isEqualToString:self.currentPeripheral.peripheral.identifier.UUIDString]) {
         //断开的是当前连接的
-        if (self.currentPeripheral.connectState == XTCBPeripheralConnectTimeOut || self.currentPeripheral.connectState == XTCBPeripheralConnectFailed || self.currentPeripheral.connectState == XTCBPeripheralNotConnected || self.currentPeripheral.connectState == XTCBPeripheralConnecting || self.currentPeripheral.connectState == XTCBPeripheralConnectCanceled) {
-            //连接超时、连接失败、未连接、连接中，不需要处理
+        if (self.currentPeripheral.connectState == XTCBPeripheralConnectTimeOut ||
+            self.currentPeripheral.connectState == XTCBPeripheralConnectFailed ||
+            self.currentPeripheral.connectState == XTCBPeripheralNotConnected ||
+            self.currentPeripheral.connectState == XTCBPeripheralConnecting ||
+            self.currentPeripheral.connectState == XTCBPeripheralConnectingCanceled ||
+            self.currentPeripheral.connectState == XTCBPeripheralDidDisconnect) {
+            //【连接超时、连接失败、未连接、连接中、连接中已被取消、连接成功后已断开连接】都不需要处理
             return;
         }
-        //连接成功的断开才需要通知
-        self.currentPeripheral.connectState = XTCBPeripheralConnectCanceled;
+        
+        //处于连接成功状态的，才进行断开处理
+        self.currentPeripheral.connectState = XTCBPeripheralDidDisconnect;
         NSError *blockError = [NSError errorWithDomain:@"错误" code:110 userInfo:@{NSLocalizedDescriptionKey: @"断开连接"}];
         
-        //获取Timer
-        dispatch_source_t timer = [self getTimerWithIdentity:TIMER_RECEIVE_DATA];
-        
-        ConnectStateDidChangeBlock chacheStateDidChangeBlock = [self.blockDictionary objectForKey:CONNECTSTATE_DIDCHANGE_BLOCK];
-        if (chacheStateDidChangeBlock) {
-            chacheStateDidChangeBlock(self.currentPeripheral, timer ? YES : NO, blockError);
-        }
-        //正在请求数据，直接断开
-        if (timer) {
+        //取消数据请求
+        if (self.isRequesting) {
             [self cancelReceiveData:blockError];
         }
         

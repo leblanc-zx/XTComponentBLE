@@ -42,7 +42,7 @@ typedef void(^ScanBlock)(NSArray *bleDevices);
 typedef void(^ScanFinishBlock)(NSError *error);
 typedef void(^ConnectSuccessBlock)(void);
 typedef void(^ConnectFailureBlock)(NSError *error);
-typedef void(^ConnectStateDidChangeBlock)(XTCBPeripheral *peripheral, BOOL isRequesting, NSError *error);
+typedef void(^ConnectStateDidChangeBlock)(XTCBPeripheralConnectState state);
 typedef XTBLEFilterResult(^StartFilterData)(NSData *receiveData);
 typedef XTBLEFilterResult(^EndFilterData)(NSData *JointData);
 typedef void(^ReceiveDataProgressBlock)(int totalNum, int successNum, int failureNum, NSData *thisData, NSError *error);
@@ -53,8 +53,9 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
 @interface XTBLEManager : NSObject
 
 @property (nonatomic, strong) CBCentralManager *centralManager; //蓝牙管理
-@property (nonatomic, assign, readonly) BOOL isScanning;        //正在扫描
 @property (nonatomic, assign, readonly) BOOL isBLEEnable;       //蓝牙是否可用
+@property (nonatomic, assign, readonly) BOOL isScanning;        //是否正在扫描
+@property (nonatomic, assign, readonly) BOOL isRequesting;      //是否正在请求帧数据
 @property (nonatomic, strong, readonly) XTCBPeripheral *currentPeripheral;      //当前的蓝牙设备
 
 /**
@@ -189,7 +190,7 @@ typedef void(^CentralManagerDidUpdateState)(CBCentralManager *central);
  @param success success
  @param failure error
  */
-- (void)changeDeviceName:(NSString *)deviceName success:(void(^)())success failure:(void(^)(NSError *error))failure;
+- (void)changeDeviceName:(NSString *)deviceName success:(void(^)(void))success failure:(void(^)(NSError *error))failure;
 
 /**
  保存蓝牙设备

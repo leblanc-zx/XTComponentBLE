@@ -8,6 +8,13 @@
 
 #import "XTCBPeripheral.h"
 
+NSString *const XTCBPeripheralConnectStateChangeKey = @"XTCBPeripheralConnectStateChangeKey";
+
 @implementation XTCBPeripheral
+
+- (void)setConnectState:(XTCBPeripheralConnectState)connectState {
+    _connectState = connectState;
+    [[NSNotificationCenter defaultCenter] postNotificationName:XTCBPeripheralConnectStateChangeKey object:self];
+}
 
 @end

@@ -9,13 +9,16 @@
 #import <Foundation/Foundation.h>
 #import <CoreBluetooth/CoreBluetooth.h>
 
+extern NSString *const XTCBPeripheralConnectStateChangeKey;
+
 typedef NS_ENUM(NSUInteger, XTCBPeripheralConnectState) {
-    XTCBPeripheralNotConnected = 0,     //未连接
-    XTCBPeripheralConnecting = 1,       //连接中
-    XTCBPeripheralConnectCanceled = 2,  //取消连接
-    XTCBPeripheralConnectFailed = 3,    //连接失败
-    XTCBPeripheralConnectTimeOut = 4,   //连接超时
-    XTCBPeripheralConnectSuccess = 5,   //连接成功
+    XTCBPeripheralNotConnected = 0,         //未连接
+    XTCBPeripheralConnecting = 1,           //连接中
+    XTCBPeripheralConnectingCanceled = 2,   //连接中被取消
+    XTCBPeripheralConnectFailed = 3,        //连接失败
+    XTCBPeripheralConnectTimeOut = 4,       //连接超时
+    XTCBPeripheralConnectSuccess = 5,       //连接成功
+    XTCBPeripheralDidDisconnect = 6,        //连接成功后断开连接
 };
 
 @interface XTCBPeripheral : NSObject
